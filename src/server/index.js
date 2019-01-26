@@ -5,6 +5,8 @@ import App from '../shared/App';
 import arrayBooks from '../shared/books.json';
 import serialize from "serialize-javascript";
 
+const fetch = require('node-fetch');
+
 const app = express();  //si crea un nuevo server invocando expressn
 // import cors from "cors";
 
@@ -20,25 +22,41 @@ app.get("*", (req, res, next) => {
     const name = arrayB[0].ficcion[0].title;
     const array = arrayB[0].ficcion;
 
-    const markup = renderToString(
-      <App data={name} arrayPropr={array} />
-    )
-  
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>SSR with RR</title>
-          <script src="/bundle.js" defer></script>
-          <script>window.__INITIAL_ARRAY__ = ${serialize(array)}</script>
-          <script>window.__INITIAL_DATA__ = ${serialize(name)}</script>
-        </head>
-  
-        <body>
-          <div id="app">${markup}</div>
-        </body>
-      </html>
-    `)
+    const arrayC = [];
+    const url = 'https://www.thecocktaildb.com/api/json/v1/1/filter.php?i=Gin';
+
+    const fetchUrl = url => fetch(url).then(response => response.json())
+                                      .then(data => arrayC.concat(data.drinks))
+                                      .then(array2 => {
+
+                                          const markup = renderToString(
+                                            <App data={name} arrayPropr={array} arrayFromFetch={array} />
+                                          )
+                                        
+                                          res.send(`
+                                            <!DOCTYPE html>
+                                            <html>
+                                              <head>
+                                                <title>SSR with RR</title>
+                                                <script src="/bundle.js" defer></script>
+                                                <script>window.__INITIAL_ARRAY__ = ${serialize(array)}</script>
+                                                <script>window.__INITIAL_DATA__ = ${serialize(name)}</script>
+                                                <script>window.__INITIAL_ARRAYFETCH__ = ${serialize(array2)}</script>
+                                              </head>
+                                        
+                                              <body>
+                                                <div id="app">${markup}</div>
+                                              </body>
+                                            </html>
+                                          `)
+                                          }
+                                        )
+                                    .catch((error) => {
+                                      console.warn(error)
+                                      return null
+                                    });
+
+  fetchUrl(url)
 })
 
 app.listen(3000, () => {
